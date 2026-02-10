@@ -9,68 +9,66 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var count = 0
-    // 触覚フィードバックの準備
-    let impactMed = UIImpactFeedbackGenerator(style: .medium)
+    
+    // 背景色の計算
+    private var backgroundColor: Color {
+        if count > 0 { return Color.green.opacity(0.05) }
+        if count < 0 { return Color.red.opacity(0.05) }
+        return Color(red: 0.95, green: 0.95, blue: 0.97)
+    }
 
     var body: some View {
         ZStack {
-            // 背景色
-            Color(red: 0.95, green: 0.95, blue: 0.97)
+            backgroundColor
                 .ignoresSafeArea()
+                .animation(.default, value: count)
 
             VStack(spacing: 40) {
-                Text("Counter")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(.gray)
+                Text("Smart Counter")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .tracking(2)
 
-                // カウント表示部分
                 Text("\(count)")
-                    .font(.system(size: 120, weight: .heavy, design: .monospaced))
-                    .foregroundColor(count >= 0 ? .primary : .red)
-                    .contentTransition(.numericText())
-                    .animation(.spring(), value: count)
+                    .font(.system(size: 120, weight: .black, design: .monospaced))
+                    .foregroundColor(count == 0 ? .primary : (count > 0 ? .green : .red))
+                    .contentTransition(.numericText(value: Double(count)))
+                    .animation(.spring(response: 0.35, dampingFraction: 0.6), value: count)
 
-                HStack(spacing: 30) {
-                    // 減らすボタン
-                    CounterButton(symbol: "minus", color: .red) {
+                HStack(spacing: 25) {
+                    // 減らす
+                    CounterButtonV2(symbol: "minus", color: .red) {
                         count -= 1
-                        triggerHaptic()
                     }
 
-                    // リセットボタン
-                    Button(action: {
-                        count = 0
-                        triggerHaptic()
-                    }) {
+                    // リセットボタン（.success に修正）
+                    Button(action: { count = 0 }) {
                         Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.gray)
-                            .padding()
-                            .background(Circle().fill(Color.white).shadow(radius: 2))
+                            .frame(width: 60, height: 60)
+                            .background(Circle().fill(Color.white).shadow(color: .black.opacity(0.1), radius: 5))
                     }
+                    .sensoryFeedback(.success, trigger: count == 0) // ここを修正
 
-                    // 増やすボタン
-                    CounterButton(symbol: "plus", color: .green) {
+                    // 増やす
+                    CounterButtonV2(symbol: "plus", color: .green) {
                         count += 1
-                        triggerHaptic()
                     }
                 }
             }
         }
     }
-
-    // 振動させる関数
-    func triggerHaptic() {
-        impactMed.impactOccurred()
-    }
 }
 
-// カスタムボタンコンポーネント
-struct CounterButton: View {
+// 改良版ボタン：長押し対応とフィードバックの統合
+struct CounterButtonV2: View {
     let symbol: String
     let color: Color
     let action: () -> Void
-
+    
+    @GestureState private var isPressing = false
+    
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
@@ -78,18 +76,22 @@ struct CounterButton: View {
                 .foregroundColor(.white)
                 .frame(width: 80, height: 80)
                 .background(color.gradient)
-                .cornerRadius(25)
+                .cornerRadius(28)
                 .shadow(color: color.opacity(0.3), radius: 10, x: 0, y: 5)
         }
         .buttonStyle(ScaleButtonStyle())
+        // 押すたびに軽い衝撃
+        .sensoryFeedback(.impact(weight: .light), trigger: isPressing)
     }
 }
 
-// 押した時に少し小さくなるエフェクト
 struct ScaleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Self.Configuration) -> some View {
+    func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.88 : 1.0)
             .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
+}
+#Preview{
+    ContentView()
 }
